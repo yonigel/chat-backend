@@ -24,6 +24,7 @@ function init(io) {
 
     socket.on("chat message", function(msg) {
       io.emit("chat message", { username: connectedUser.name, message: msg });
+      bot.checkBadLanguage(msg);
       if (connectedUser.name === "BOT_NAME") {
         return;
       }

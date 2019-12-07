@@ -15,6 +15,8 @@ const QUESTIONS_PREFIXES = [
   "what"
 ];
 
+const BAD_LANGUAGE = ["fuck"];
+
 let questionsAnswersList = [
   {
     question: "who are you?",
@@ -119,9 +121,16 @@ function sendUserMessage(socket, message) {
   socket.emit("bot message", message);
 }
 
+function checkBadLanguage(message) {
+  if (BAD_LANGUAGE.some(badWord => message.includes(badWord))) {
+    io.emit("bot message", "Whatch your language! there are kids in here.");
+  }
+}
+
 module.exports = {
   init,
   answerToQuestion,
+  checkBadLanguage,
   addAnswerToQuestion,
   sendMessage,
   BOT_NAME,
