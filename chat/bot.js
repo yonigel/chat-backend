@@ -12,14 +12,29 @@ const QUESTIONS_PREFIXES = [
   "are",
   "am",
   "where",
-  "what"
+  "what",
+  "do",
+  "does"
 ];
 
-const BAD_LANGUAGE = ["fuck"];
+const BAD_LANGUAGE = ["fuck", "shit"];
+
+const DONT_KNOW_ANSWERS = [
+  "I have absolute no idea! what a stupid question.",
+  "Oh crap, I have no idea! wait for someone else answer.",
+  "Let me get back to you about this one...",
+  "Oh jeez, I dont know"
+];
+
+function getRandomAnswer() {
+  return DONT_KNOW_ANSWERS[
+    Math.floor(Math.random() * DONT_KNOW_ANSWERS.length)
+  ];
+}
 
 let questionsAnswersList = [
   {
-    question: "who are you?",
+    question: "bot, who are you?",
     answer: "I am Minion bot! HaHaHaHa!"
   }
 ];
@@ -106,7 +121,7 @@ function answerToQuestion(message) {
     return getAnswerToQuestion(message);
   } else {
     addQuestion(message);
-    return "I have absolute no idea! what a stupid question.";
+    return getRandomAnswer();
   }
 }
 
