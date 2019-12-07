@@ -7,6 +7,7 @@ function init(io) {
     const connectedUser = {};
 
     socket.emit("got users list", userList);
+    bot.sendUserMessage(socket, "Welcome to our chat, hope you have fun!");
 
     socket.on("username", name => {
       if (name === "" || name === undefined) {
@@ -17,6 +18,7 @@ function init(io) {
       connectedUser.id = id;
       userList.push(connectedUser);
       io.emit("user join", connectedUser);
+
       bot.sendMessage(`user ${connectedUser.name} just connected!`);
     });
 

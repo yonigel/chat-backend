@@ -115,10 +115,15 @@ function sendMessage(message) {
   io.emit("bot message", message);
 }
 
+function sendUserMessage(socket, message) {
+  socket.emit("bot message", message);
+}
+
 module.exports = {
   init,
   answerToQuestion,
   addAnswerToQuestion,
   sendMessage,
-  BOT_NAME
+  BOT_NAME,
+  sendUserMessage
 };
