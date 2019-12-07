@@ -1,5 +1,19 @@
+const stringSimilarity = require("string-similarity");
+
 const BOT_NAME = "Minion_Bot";
-const QUESTIONS_PREFIXES = ["who", "when", "how", "is", "are", "where"];
+const LOW_QUESTION_MACH_THRESHOLD = 0.75;
+const HIGH_QUESTION_MACH_THRESHOLD = 0.9;
+const NUMBER_OF_WORDS_THRESHOLD = 3;
+const QUESTIONS_PREFIXES = [
+  "who",
+  "when",
+  "how",
+  "is",
+  "are",
+  "am",
+  "where",
+  "what"
+];
 
 let questionsAnswersList = [
   {
@@ -22,29 +36,51 @@ function isMessageQuestion(message) {
   return isMessageHaveQuestionMark || isMessageStartWithQuestion;
 }
 
-function isQuestionExists(message) {
-  return questionsAnswersList.some(
-    questionAnswer => questionAnswer.question === message
+function getEquivalentQuestion(question) {
+  const numberOfWords = question.split(" ").length;
+  let matchPercentageThreshold = 0;
+  if (numberOfWords <= NUMBER_OF_WORDS_THRESHOLD) {
+    matchPercentageThreshold = HIGH_QUESTION_MACH_THRESHOLD;
+  } else {
+    matchPercentageThreshold = LOW_QUESTION_MACH_THRESHOLD;
+  }
+  const allQuestions = questionsAnswersList.map(
+    questionAnswer => questionAnswer.question
   );
+  const matches = stringSimilarity.findBestMatch(question, allQuestions);
+
+  const equivalentQuestion = matches.ratings.find(
+    match => match.rating >= matchPercentageThreshold
+  );
+
+  return equivalentQuestion !== undefined
+    ? questionsAnswersList.find(
+        answerQuestion => answerQuestion.question === equivalentQuestion.target
+      )
+    : {};
+}
+
+function isQuestionExists(question) {
+  const equivalentQuestion = getEquivalentQuestion(question);
+  const isQuestionExists =
+    equivalentQuestion !== undefined &&
+    equivalentQuestion.answer !== "" &&
+    equivalentQuestion.answer !== undefined;
+  return isQuestionExists;
 }
 
 function getAnswerToQuestion(question) {
-  return questionsAnswersList.find(
-    questionAnswer =>
-      questionAnswer.question === question && questionAnswer.answer !== ""
-  ).answer;
+  const answer = getEquivalentQuestion(question).answer;
+  return answer;
 }
 
 function addQuestion(message) {
-  console.log(`addQuestion`, message);
   if (isMessageQuestion(message) && !isQuestionExists(message)) {
-    console.log(`adding`);
     questionsAnswersList.push({ question: message, answer: "" });
   }
 }
 
 function isQuestionWasAsked() {
-  console.log(`is asked`, questionsAnswersList);
   return questionsAnswersList.some(
     questionAnswer => questionAnswer.answer === ""
   );
