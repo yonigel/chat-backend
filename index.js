@@ -1,31 +1,41 @@
-var app = require("express")();
-var http = require("http").createServer(app);
-var io = require("socket.io")(http);
+const app = require("express")();
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
 
+// TODO - delete
 app.get("/", function(req, res) {
   res.send("<h1>Hello world</h1>");
 });
-
+let userList = [];
 io.on("connection", function(socket) {
-  let username = "";
-  let userId = socket.id;
+  let id = socket.id;
+  const connectedUser = {};
 
-  //   io.emit("user join");
+  socket.emit("got users list", userList);
 
-  socket.on("username", newUser => {
-    console.log(`got username ${newUser}`);
-    username = newUser;
-    io.emit("user join", { name: newUser, id: userId });
+  socket.on("username", name => {
+    if (name === "" || name === undefined) {
+      return;
+    }
+
+    username = name;
+    connectedUser.name = name;
+    connectedUser.id = id;
+    userList.push(connectedUser);
+    io.emit("user join", connectedUser);
+    // socket.emit("got users list", userList);
+    console.log(`sending userList`, userList);
   });
 
   socket.on("chat message", function(msg) {
-    console.log(`got message ${msg}`);
-    io.emit("chat message", { username, message: msg });
+    io.emit("chat message", { username: connectedUser.name, message: msg });
   });
 
   socket.on("disconnect", function() {
-    console.log("user disconnected");
-    io.emit("user left", { name: username, id: userId });
+    console.log(`user left:`, connectedUser);
+    userList = userList.filter(user => user.id !== id);
+    io.emit("user left", connectedUser);
+    console.log(`users list`, userList);
   });
 });
 
