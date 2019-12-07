@@ -1,4 +1,5 @@
-const questionPrefixes = ["who", "when", "how", "is", "are", "where"];
+const BOT_NAME = "Minion_Bot";
+const QUESTIONS_PREFIXES = ["who", "when", "how", "is", "are", "where"];
 
 let questionsAnswersList = [
   {
@@ -7,9 +8,15 @@ let questionsAnswersList = [
   }
 ];
 
+let io;
+
+function init(socket) {
+  io = socket;
+}
+
 function isMessageQuestion(message) {
   const isMessageHaveQuestionMark = message.indexOf("?") !== -1;
-  const isMessageStartWithQuestion = questionPrefixes.some(question =>
+  const isMessageStartWithQuestion = QUESTIONS_PREFIXES.some(question =>
     message.startsWith(question)
   );
   return isMessageHaveQuestionMark || isMessageStartWithQuestion;
@@ -21,22 +28,36 @@ function isQuestionExists(message) {
   );
 }
 
-function isAnswerExists(message) {
-  return questionsAnswersList.some(
-    questionAnswer => questionAnswer.answer === message
-  );
+function getAnswerToQuestion(question) {
+  return questionsAnswersList.find(
+    questionAnswer =>
+      questionAnswer.question === question && questionAnswer.answer !== ""
+  ).answer;
 }
 
 function addQuestion(message) {
+  console.log(`addQuestion`, message);
   if (isMessageQuestion(message) && !isQuestionExists(message)) {
+    console.log(`adding`);
     questionsAnswersList.push({ question: message, answer: "" });
   }
 }
 
-function addAnswer(message) {
-  if (isMessageQuestion(message) && !isAnswerExists(message)) {
+function isQuestionWasAsked() {
+  console.log(`is asked`, questionsAnswersList);
+  return questionsAnswersList.some(
+    questionAnswer => questionAnswer.answer === ""
+  );
+}
+
+function addAnswerToQuestion(answer) {
+  if (isMessageQuestion(answer) || !isQuestionWasAsked()) {
     return;
   }
+  const askedQuestionWithoutAnswer = questionsAnswersList.find(
+    questionAnswer => questionAnswer.answer === ""
+  );
+  askedQuestionWithoutAnswer.answer = answer;
 }
 
 function answerToQuestion(message) {
@@ -44,12 +65,24 @@ function answerToQuestion(message) {
     return;
   }
   if (isQuestionExists(message)) {
-    return "I know this one...";
+    return getAnswerToQuestion(message);
   } else {
-    return "I have absolute no idea!";
+    addQuestion(message);
+    return "I have absolute no idea! what a stupid question.";
   }
 }
 
+function sendMessage(message) {
+  if (io === undefined) {
+    return;
+  }
+  io.emit("bot message", message);
+}
+
 module.exports = {
-  answerToQuestion
+  init,
+  answerToQuestion,
+  addAnswerToQuestion,
+  sendMessage,
+  BOT_NAME
 };
