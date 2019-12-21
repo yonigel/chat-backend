@@ -1,49 +1,65 @@
 const bot = require("./bot");
+const { CHAT_ACTIONS } = require("./consts");
+
+const BOT_NAME = "BOT_NAME";
+
+const userList = [];
+const connectedUser = {};
+
+function onUserDisconnect(io, connectedUser, userList, socketId) {
+  if (connectedUser.name === "" || connectedUser.name === undefined) {
+    return;
+  }
+  userList = userList.filter(user => user.id !== socketId);
+  io.emit(CHAT_ACTIONS.UserLeft, connectedUser);
+  bot.sendMessage(`user ${connectedUser.name} left`);
+}
+
+function onNewChatMessage(io, connectedUser, message) {
+  io.emit(CHAT_ACTIONS.ChatMessage, { username: connectedUser.name, message });
+  bot.checkBadLanguage(message);
+  // ignore messages from the bot
+  if (connectedUser.name === BOT_NAME) {
+    return;
+  }
+
+  const botAnswer = bot.answerToQuestion(message);
+  if (botAnswer === "" || botAnswer === undefined) {
+    bot.addAnswerToQuestion(message);
+    return;
+  }
+  io.emit(CHAT_ACTIONS.BotMessage, botAnswer);
+}
+
+function onGettingUsername(io, username, socketId) {
+  if (username === "" || username === undefined) {
+    return;
+  }
+  connectedUser.name = username;
+  connectedUser.id = socketId;
+  userList.push(connectedUser);
+  io.emit(CHAT_ACTIONS.UserJoined, connectedUser);
+  bot.sendMessage(`user ${connectedUser.name} just connected!`);
+}
+
 function init(io) {
   bot.init(io);
-  let userList = [];
-  io.on("connection", function(socket) {
-    let id = socket.id;
-    const connectedUser = {};
+  io.on(CHAT_ACTIONS.Connection, function(socket) {
+    const socketId = socket.id;
 
-    socket.emit("got users list", userList);
+    socket.emit(CHAT_ACTIONS.GotUserList, userList);
     bot.sendUserMessage(socket, "Welcome to our chat, hope you have fun!");
 
-    socket.on("username", name => {
-      if (name === "" || name === undefined) {
-        return;
-      }
-      username = name;
-      connectedUser.name = name;
-      connectedUser.id = id;
-      userList.push(connectedUser);
-      io.emit("user join", connectedUser);
-
-      bot.sendMessage(`user ${connectedUser.name} just connected!`);
+    socket.on(CHAT_ACTIONS.GotUsername, username => {
+      onGettingUsername(io, username, socketId);
     });
 
-    socket.on("chat message", function(msg) {
-      io.emit("chat message", { username: connectedUser.name, message: msg });
-      bot.checkBadLanguage(msg);
-      if (connectedUser.name === "BOT_NAME") {
-        return;
-      }
-
-      const botAnswer = bot.answerToQuestion(msg);
-      if (botAnswer === "" || botAnswer === undefined) {
-        bot.addAnswerToQuestion(msg);
-        return;
-      }
-      io.emit("bot message", botAnswer);
+    socket.on(CHAT_ACTIONS.ChatMessage, function(message) {
+      onNewChatMessage(io, connectedUser, message);
     });
 
-    socket.on("disconnect", function() {
-      if (connectedUser.name === "" || connectedUser.name === undefined) {
-        return;
-      }
-      userList = userList.filter(user => user.id !== id);
-      io.emit("user left", connectedUser);
-      bot.sendMessage(`user ${connectedUser.name} left`);
+    socket.on(CHAT_ACTIONS.Disconnection, function() {
+      onUserDisconnect(io, connectedUser, userList, socketId);
     });
   });
 }
